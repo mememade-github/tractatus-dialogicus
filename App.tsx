@@ -7,6 +7,7 @@ import ChatMessage from './components/ChatMessage';
 import ContextInspector from './components/ContextInspector';
 import TokenInspectorModal from './components/TokenInspectorModal';
 import Sidebar from './components/Sidebar';
+import { exampleData } from './history/exampleData';
 
 const App: React.FC = () => {
   const [sessions, setSessions] = useState<SavedSession[]>([]);
@@ -30,9 +31,10 @@ const App: React.FC = () => {
   
   const currentMessages = chatState.language === 'ko' ? chatState.historyKO : chatState.historyEN;
 
-  // 세션 로드 및 초기화
+  // [FILE SYSTEM SYNC] 세션 로드 및 초기화
   useEffect(() => {
     const stored = localStorage.getItem('tractatus_sessions');
+    
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -42,12 +44,34 @@ const App: React.FC = () => {
           setChatState(parsed[0].data);
           return;
         }
-      } catch (e) { console.error("Session restoration failed", e); }
+      } catch (e) { 
+        console.error("Session restoration failed, fallback to example file.", e); 
+      }
     }
-    handleNewChat();
+
+    // 저장된 세션이 없거나 오류 발생 시, history 폴더의 예시 파일을 로드
+    initializeWithExampleFile();
   }, []);
 
-  // 세션 자동 저장 (ChatState 변경 시)
+  const initializeWithExampleFile = () => {
+    try {
+      // exampleData는 이제 SavedSession 타입을 완벽히 준수하므로 직접 할당
+      const initSession: SavedSession = exampleData;
+      
+      const initialList = [initSession];
+      setSessions(initialList);
+      setCurrentSessionId(initSession.id);
+      setChatState(initSession.data);
+      
+      // 로컬 스토리지(가상 파일 시스템)에 즉시 동기화
+      localStorage.setItem('tractatus_sessions', JSON.stringify(initialList));
+    } catch (e) {
+      console.error("Failed to load example file", e);
+      handleNewChat(); // 최악의 경우 빈 채팅 시작
+    }
+  };
+
+  // [MEMORY PERSISTENCE] 세션 자동 저장 (ChatState 변경 시)
   useEffect(() => {
     if (!currentSessionId || sessions.length === 0) return;
     
@@ -55,14 +79,21 @@ const App: React.FC = () => {
       setSessions(prev => {
         const idx = prev.findIndex(s => s.id === currentSessionId);
         if (idx === -1) return prev;
+        
         const updated = [...prev];
         let title = updated[idx].title;
+        
+        // 제목이 기본값이면 첫 번째 사용자 메시지로 자동 설정
         if (title === "new_logic_stream") {
           const firstUser = chatState.historyKO.find(m => m.role === 'user');
           if (firstUser) title = firstUser.content.slice(0, 30).trim() + "...";
         }
+        
         updated[idx] = { ...updated[idx], title, data: chatState, updatedAt: Date.now() };
-        const sorted = updated.sort((a, b) => b.updatedAt - a.updatedAt);
+        
+        // 최신 수정순 정렬 및 최대 10개 유지 (History Rotation)
+        const sorted = updated.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 10);
+        
         localStorage.setItem('tractatus_sessions', JSON.stringify(sorted));
         return sorted;
       });
@@ -85,8 +116,14 @@ const App: React.FC = () => {
       error: null, 
       language: chatState?.language || 'ko' 
     };
+    // 새 파일 생성 개념
     const newSession: SavedSession = { id: newId, title: "new_logic_stream", updatedAt: Date.now(), data: newState };
-    setSessions(prev => [newSession, ...prev].slice(0, 10));
+    
+    setSessions(prev => {
+      const updated = [newSession, ...prev].slice(0, 10);
+      localStorage.setItem('tractatus_sessions', JSON.stringify(updated));
+      return updated;
+    });
     setCurrentSessionId(newId);
     setChatState(newState);
   }, [chatState?.language]);
@@ -100,11 +137,12 @@ const App: React.FC = () => {
     e.stopPropagation();
     const nextSessions = sessions.filter(s => s.id !== id);
     setSessions(nextSessions);
-    // 현재 세션을 삭제한 경우 동기화
+    // 파일 삭제 동기화
     localStorage.setItem('tractatus_sessions', JSON.stringify(nextSessions));
+    
     if (currentSessionId === id) {
       if (nextSessions.length > 0) handleLoadSession(nextSessions[0]);
-      else handleNewChat();
+      else initializeWithExampleFile(); // 모두 삭제되면 다시 예시 파일 로드
     }
   };
 
@@ -115,35 +153,37 @@ const App: React.FC = () => {
         const content = e.target?.result as string;
         const parsed = JSON.parse(content);
         
-        // 데이터 구조 유효성 검사 강화
-        if (!parsed.id || !parsed.data) {
-           throw new Error("Invalid session file format: Missing core ID or data.");
-        }
-        if (!Array.isArray(parsed.data.historyKO) || !Array.isArray(parsed.data.historyEN)) {
-            throw new Error("Invalid session file format: Corrupted history buffers.");
+        // 데이터 구조 유효성 검사
+        if (!parsed.data || !Array.isArray(parsed.data.historyKO)) {
+            throw new Error("Invalid format");
         }
 
+        // ID가 없으면(외부 파일) 새로 생성, 있으면 기존 ID 사용
+        const importedId = parsed.id || Date.now().toString();
+        
         const importedSession: SavedSession = {
-           ...parsed,
-           updatedAt: Date.now() // 가져온 시간으로 갱신
+           id: importedId,
+           title: parsed.title || file.name.replace('.json', ''),
+           updatedAt: Date.now(),
+           data: parsed.data
         };
 
         setSessions(prev => {
            // 중복 ID 방지 (덮어쓰기)
-           const filtered = prev.filter(s => s.id !== importedSession.id);
+           const filtered = prev.filter(s => s.id !== importedId);
            const updated = [importedSession, ...filtered].slice(0, 10);
-           // 즉시 로컬 스토리지에 저장하여 상태 무결성 보장
+           // [SYNC] 가져오기 즉시 스토리지 동기화
            localStorage.setItem('tractatus_sessions', JSON.stringify(updated));
            return updated;
         });
 
-        // 가져온 세션을 즉시 로드
-        setCurrentSessionId(importedSession.id);
+        // 가져온 파일 열기
+        setCurrentSessionId(importedId);
         setChatState(importedSession.data);
         
       } catch (error) {
         console.error(error);
-        alert("Failed to import: The file structure is incompatible or corrupted.");
+        alert("Failed to import: Invalid file structure.");
       }
     };
     reader.readAsText(file);
@@ -152,30 +192,45 @@ const App: React.FC = () => {
   const handleExportSession = useCallback(() => {
     if (!currentSessionId) return;
     
-    // 중요: sessions 배열이 아닌 현재 chatState(메모리 상 최신 상태)를 우선 사용하여 내보냄
-    // sessions 배열은 debounce로 인해 최신 입력이 누락될 수 있음
+    // 현재 메모리 상의 최신 상태를 내보냄
     let sessionToExport: SavedSession | undefined;
 
     if (currentSessionId && chatState) {
-        // 현재 열려있는 세션인 경우, live state 사용
         const currentMeta = sessions.find(s => s.id === currentSessionId);
         sessionToExport = {
             id: currentSessionId,
-            title: currentMeta?.title || "Untitled Analysis",
+            title: currentMeta?.title || "new_logic_stream",
             updatedAt: Date.now(),
             data: chatState
         };
     } else {
-        // 그 외의 경우 sessions 배열에서 검색
         sessionToExport = sessions.find(s => s.id === currentSessionId);
     }
 
     if (!sessionToExport) return;
 
+    // [FILENAME NORMALIZATION]
+    let filenameBase = "";
+    const isDefaultOrEmpty = sessionToExport.title === "new_logic_stream" || !sessionToExport.title;
+
+    if (isDefaultOrEmpty) {
+        const ts = !isNaN(Number(sessionToExport.id)) ? Number(sessionToExport.id) : Date.now();
+        const date = new Date(ts);
+        const Y = date.getFullYear();
+        const M = String(date.getMonth() + 1).padStart(2, '0');
+        const D = String(date.getDate()).padStart(2, '0');
+        const h = String(date.getHours()).padStart(2, '0');
+        const m = String(date.getMinutes()).padStart(2, '0');
+        const s = String(date.getSeconds()).padStart(2, '0');
+        filenameBase = `${Y}${M}${D}_${h}${m}${s}`;
+    } else {
+        filenameBase = sessionToExport.title.replace(/[^a-z0-9가-힣\-_]/gi, '_').slice(0, 50);
+    }
+
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sessionToExport, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `tractatus_${sessionToExport.title.replace(/[^a-z0-9가-힣]/gi, '_').slice(0, 30)}.json`);
+    downloadAnchorNode.setAttribute("download", `tractatus_${filenameBase}.json`);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -211,7 +266,6 @@ const App: React.FC = () => {
         historyEN: currentLang === 'en' ? [...prev.historyEN, modelMsg] : prev.historyEN,
       }));
 
-      // Translation / Sync Phase
       const trans = await translateTurn(userMsg.content, modelMsg.content, modelMsg.reasoning!, shadowLang);
       const uShadow: Message = { ...userMsg, content: trans.userContent };
       const mShadow: Message = { ...modelMsg, content: trans.modelContent, reasoning: trans.modelReasoning };
@@ -233,7 +287,6 @@ const App: React.FC = () => {
     setChatState(prev => ({ ...prev, language: prev.language === 'ko' ? 'en' : 'ko' }));
   };
 
-  // Determine if sync is in progress based on loading phase
   const isSyncInProgress = chatState.loadingPhase === LOADING_PHASES.SYNC.ko || chatState.loadingPhase === LOADING_PHASES.SYNC.en;
 
   return (

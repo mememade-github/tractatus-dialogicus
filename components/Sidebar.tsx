@@ -36,9 +36,24 @@ const Sidebar: React.FC<SidebarProps> = ({
     setEditingId(null);
   };
 
-  const formatFileName = (title: string) => {
-    if (title === "new_logic_stream") return "Untitled Analysis";
-    return title.toLowerCase().replace(/[^a-z0-9가-힣]/g, '_').slice(0, 24);
+  const formatFileName = (session: SavedSession) => {
+    // 기본 제목인 경우 생성 시각(ID)을 파싱하여 표시
+    if (session.title === "new_logic_stream") {
+       try {
+         const ts = !isNaN(Number(session.id)) ? Number(session.id) : session.updatedAt;
+         const date = new Date(ts);
+         // 포맷: YY.MM.DD HH:mm
+         const y = String(date.getFullYear()).slice(2);
+         const m = String(date.getMonth() + 1).padStart(2, '0');
+         const d = String(date.getDate()).padStart(2, '0');
+         const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+         return `File ${y}.${m}.${d} ${time}`;
+       } catch (e) {
+         return "Untitled File";
+       }
+    }
+    // 사용자 지정 제목인 경우
+    return session.title.slice(0, 24);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         
         <div className="p-6 bg-white">
            <div className="flex justify-between items-center mb-6">
-              <span className="text-[11px] font-bold text-primary uppercase tracking-[0.2em] font-mono">Stream Storage</span>
+              <span className="text-[11px] font-bold text-primary uppercase tracking-[0.2em] font-mono">History Drive</span>
               <button onClick={onToggle} className="md:hidden p-2 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2"/></svg>
               </button>
@@ -74,7 +89,7 @@ const Sidebar: React.FC<SidebarProps> = ({
              className="w-full flex items-center justify-center gap-3 bg-primary text-white px-6 py-4 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
            >
              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
-             <span>New Analysis</span>
+             <span>New File</span>
            </button>
         </div>
 
@@ -92,7 +107,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => onLoadSession(session)}
               >
                 <svg className={`w-5 h-5 shrink-0 ${currentSessionId === session.id ? 'text-primary' : 'text-zinc-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                  <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  <path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 00 2 2z" />
                 </svg>
                 
                 <div className="flex-1 truncate">
@@ -107,13 +122,13 @@ const Sidebar: React.FC<SidebarProps> = ({
                       onClick={(e) => e.stopPropagation()}
                     />
                   ) : (
-                    <span className="text-sm truncate block">{formatFileName(session.title)}</span>
+                    <span className="text-sm truncate block font-mono text-xs">{formatFileName(session)}</span>
                   )}
                 </div>
 
                 <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
                   <button 
-                    onClick={(e) => { e.stopPropagation(); setEditingId(session.id); setEditValue(session.title); }} 
+                    onClick={(e) => { e.stopPropagation(); setEditingId(session.id); setEditValue(session.title === "new_logic_stream" ? "" : session.title); }} 
                     className="p-2 rounded-full hover:bg-zinc-200 text-zinc-400"
                     title="Rename"
                   >
@@ -122,7 +137,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                   <button 
                     onClick={(e) => onDeleteSession(session.id, e)} 
                     className="p-2 rounded-full hover:bg-red-50 text-red-400"
-                    title="Delete Analysis"
+                    title="Delete File"
                   >
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" strokeLinecap="round" strokeLinejoin="round"/></svg>
                   </button>
@@ -154,7 +169,7 @@ const Sidebar: React.FC<SidebarProps> = ({
            </div>
            
            <div className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest text-center">
-             Observer Cache: {sessions.length}/10
+             Files in Drive: {sessions.length}/10
            </div>
         </div>
       </aside>
