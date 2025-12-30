@@ -18,18 +18,72 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, index, onInspect }) 
     tractatusNumber = isModel ? `${turnIndex}.1` : `${turnIndex}.0`;
   }
 
-  const renderMarkdown = (text: string) => {
-    let html = text
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+  // [FIX] XSS 취약점 방지: dangerouslySetInnerHTML 대신 React 컴포넌트로 렌더링
+  const renderMarkdown = (text: string): React.ReactNode => {
+    // 줄바꿈으로 분리
+    const lines = text.split('\n');
 
-    html = html.replace(/\*\*(.*?)\*\*/g, '<strong class="text-zinc-900 font-bold">$1</strong>');
-    html = html.replace(/\*(.*?)\*/g, '<em class="italic">$1</em>');
-    html = html.replace(/`(.*?)`/g, '<code class="bg-zinc-50 px-1 rounded font-mono text-xs text-primary">$1</code>');
-    html = html.replace(/\n/g, '<br />');
+    return (
+      <div className="markdown-content">
+        {lines.map((line, lineIdx) => (
+          <React.Fragment key={lineIdx}>
+            {lineIdx > 0 && <br />}
+            {renderLine(line)}
+          </React.Fragment>
+        ))}
+      </div>
+    );
+  };
 
-    return <div className="markdown-content" dangerouslySetInnerHTML={{ __html: html }} />;
+  // 한 줄을 파싱하여 React 노드로 변환
+  const renderLine = (line: string): React.ReactNode => {
+    const parts: React.ReactNode[] = [];
+    let remaining = line;
+    let keyIdx = 0;
+
+    // 패턴 매칭: **bold**, *italic*, `code`
+    const patterns = [
+      { regex: /\*\*(.+?)\*\*/g, render: (m: string) => <strong key={keyIdx++} className="text-zinc-900 font-bold">{m}</strong> },
+      { regex: /\*(.+?)\*/g, render: (m: string) => <em key={keyIdx++} className="italic">{m}</em> },
+      { regex: /`(.+?)`/g, render: (m: string) => <code key={keyIdx++} className="bg-zinc-50 px-1 rounded font-mono text-xs text-primary">{m}</code> },
+    ];
+
+    // 간단한 토큰화: 정규식 매칭 순서대로 처리
+    const tokenize = (text: string): React.ReactNode[] => {
+      const tokens: React.ReactNode[] = [];
+      let lastIndex = 0;
+
+      // 모든 패턴을 한번에 찾기 위한 통합 정규식
+      const combinedRegex = /(\*\*(.+?)\*\*)|(\*(.+?)\*)|(`(.+?)`)/g;
+      let match;
+
+      while ((match = combinedRegex.exec(text)) !== null) {
+        // 매치 전 텍스트
+        if (match.index > lastIndex) {
+          tokens.push(text.slice(lastIndex, match.index));
+        }
+
+        // 매치된 부분 처리
+        if (match[1]) { // **bold**
+          tokens.push(<strong key={keyIdx++} className="text-zinc-900 font-bold">{match[2]}</strong>);
+        } else if (match[3]) { // *italic*
+          tokens.push(<em key={keyIdx++} className="italic">{match[4]}</em>);
+        } else if (match[5]) { // `code`
+          tokens.push(<code key={keyIdx++} className="bg-zinc-50 px-1 rounded font-mono text-xs text-primary">{match[6]}</code>);
+        }
+
+        lastIndex = match.index + match[0].length;
+      }
+
+      // 남은 텍스트
+      if (lastIndex < text.length) {
+        tokens.push(text.slice(lastIndex));
+      }
+
+      return tokens.length > 0 ? tokens : [text];
+    };
+
+    return <>{tokenize(remaining)}</>;
   };
 
   return (
