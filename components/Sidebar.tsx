@@ -11,6 +11,7 @@ interface SidebarProps {
   onDeleteSession: (id: string, e: React.MouseEvent) => void;
   onRenameSession: (id: string, newTitle: string) => void;
   onImportFile: (file: File) => void;
+  onExportSession: () => void;
   onToggle: () => void;
 }
 
@@ -23,6 +24,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDeleteSession,
   onRenameSession,
   onImportFile,
+  onExportSession,
   onToggle
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -122,17 +124,29 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </nav>
 
-        <div className="p-6 border-t border-zinc-100 bg-white">
+        <div className="p-6 border-t border-zinc-100 bg-white space-y-3">
            <input type="file" ref={fileInputRef} onChange={(e) => e.target.files && onImportFile(e.target.files[0])} accept=".json" className="hidden" />
-           <button 
-             onClick={() => fileInputRef.current?.click()} 
-             className="w-full py-3 rounded-full border border-zinc-200 text-zinc-600 text-sm font-bold hover:bg-zinc-50 transition-colors mb-4 flex items-center justify-center gap-2"
-           >
-             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" strokeLinecap="round" strokeLinejoin="round"/></svg>
-             Sync File (Import)
-           </button>
-           <div className="px-4 text-[10px] font-bold text-zinc-300 uppercase tracking-widest text-center">
-             Observer Cache Limit: {sessions.length}/10
+           
+           <div className="flex gap-2">
+             <button 
+               onClick={onExportSession} 
+               disabled={!currentSessionId}
+               className="flex-1 py-3 rounded-2xl border border-zinc-200 text-zinc-600 text-xs font-bold hover:bg-zinc-50 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+             >
+               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" strokeLinecap="round" strokeLinejoin="round"/></svg>
+               Export
+             </button>
+             <button 
+               onClick={() => fileInputRef.current?.click()} 
+               className="flex-1 py-3 rounded-2xl border border-zinc-200 text-zinc-600 text-xs font-bold hover:bg-zinc-50 transition-colors flex items-center justify-center gap-2"
+             >
+               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l4-4m0 0l4 4m-4-4v12" strokeLinecap="round" strokeLinejoin="round"/></svg>
+               Import
+             </button>
+           </div>
+           
+           <div className="text-[9px] font-bold text-zinc-300 uppercase tracking-widest text-center">
+             Observer Cache: {sessions.length}/10
            </div>
         </div>
       </aside>
