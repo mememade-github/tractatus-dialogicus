@@ -115,35 +115,35 @@ const App: React.FC = () => {
         const content = e.target?.result as string;
         const parsed = JSON.parse(content);
         
-        // 간단한 스키마 검증
-        if (!parsed.id || !parsed.data || !Array.isArray(parsed.data.historyKO)) {
-           throw new Error("Invalid session file format.");
+        // 데이터 구조 유효성 검사 강화
+        if (!parsed.id || !parsed.data) {
+           throw new Error("Invalid session file format: Missing core ID or data.");
+        }
+        if (!Array.isArray(parsed.data.historyKO) || !Array.isArray(parsed.data.historyEN)) {
+            throw new Error("Invalid session file format: Corrupted history buffers.");
         }
 
         const importedSession: SavedSession = {
            ...parsed,
-           updatedAt: Date.now() // 최신으로 갱신
+           updatedAt: Date.now() // 가져온 시간으로 갱신
         };
 
         setSessions(prev => {
-           // 중복 ID 제거 (덮어쓰기 효과)
+           // 중복 ID 방지 (덮어쓰기)
            const filtered = prev.filter(s => s.id !== importedSession.id);
-           // 상단에 추가하고 최대 10개 유지
            const updated = [importedSession, ...filtered].slice(0, 10);
+           // 즉시 로컬 스토리지에 저장하여 상태 무결성 보장
            localStorage.setItem('tractatus_sessions', JSON.stringify(updated));
            return updated;
         });
 
-        // 불러온 세션 활성화
+        // 가져온 세션을 즉시 로드
         setCurrentSessionId(importedSession.id);
         setChatState(importedSession.data);
-        if (window.confirm("Analysis file imported successfully. Load context now?")) {
-           // 이미 상태는 설정됨
-        }
-
+        
       } catch (error) {
         console.error(error);
-        alert("Failed to import session file. Please ensure it is a valid JSON export.");
+        alert("Failed to import: The file structure is incompatible or corrupted.");
       }
     };
     reader.readAsText(file);
@@ -151,17 +151,35 @@ const App: React.FC = () => {
 
   const handleExportSession = useCallback(() => {
     if (!currentSessionId) return;
-    const session = sessions.find(s => s.id === currentSessionId);
-    if (!session) return;
+    
+    // 중요: sessions 배열이 아닌 현재 chatState(메모리 상 최신 상태)를 우선 사용하여 내보냄
+    // sessions 배열은 debounce로 인해 최신 입력이 누락될 수 있음
+    let sessionToExport: SavedSession | undefined;
 
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(session, null, 2));
+    if (currentSessionId && chatState) {
+        // 현재 열려있는 세션인 경우, live state 사용
+        const currentMeta = sessions.find(s => s.id === currentSessionId);
+        sessionToExport = {
+            id: currentSessionId,
+            title: currentMeta?.title || "Untitled Analysis",
+            updatedAt: Date.now(),
+            data: chatState
+        };
+    } else {
+        // 그 외의 경우 sessions 배열에서 검색
+        sessionToExport = sessions.find(s => s.id === currentSessionId);
+    }
+
+    if (!sessionToExport) return;
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sessionToExport, null, 2));
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `tractatus_${session.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`);
+    downloadAnchorNode.setAttribute("download", `tractatus_${sessionToExport.title.replace(/[^a-z0-9가-힣]/gi, '_').slice(0, 30)}.json`);
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
-  }, [currentSessionId, sessions]);
+  }, [currentSessionId, sessions, chatState]);
 
   const handleSend = async () => {
     if (!input.trim() || chatState.isLoading) return;
