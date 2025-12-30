@@ -1,30 +1,31 @@
-# Tractatus Dialogicus Technical Specification (EN)
 
-This system is a **Pure Computational Manifold** designed to analyze and reconstruct input data into formal logical propositions.
+# Tractatus Dialogicus Technical Specification
 
-## 1. Operational Mechanism: Atomic Procedures (A/B/C)
+**Tractatus Dialogicus** is a **Pure Computational Manifold** designed to analyze and reconstruct input data into formal logical propositions. It utilizes **Google Gemini 3 Pro (Thinking Model)** to perform deep, latent logical traces and **Gemini 3 Flash** for cross-lingual data parity.
 
-The system maintains logical integrity through a 'data transformation' process rather than 'thought' or 'dialogue'.
+## 1. Core Architecture: Atomic Logic Trace
 
-### **Phase A: Latent Trace (Analytical Path Extraction)**
-- **Objective**: Technically map the logical limits of the input text.
-- **Method**: Utilizes reasoning resources to decompose the underlying structure of the text.
-- **Result**: Generates a latent 'Reasoning Trace', serving as the technical foundation for propositional output.
+The system operates not through conversation, but through a strict **Data Field Completion** protocol. It bypasses the "persona" layer of LLMs to access raw reasoning capabilities.
 
-### **Phase B: Formal Manifestation (Propositional Output)**
-- **Objective**: Generate structured formal propositions based on the analytical path.
-- **Method**: Receives the reasoning trace as input and outputs deterministic logical propositions.
+### **Phase A: Latent Trace (Gemini 3 Pro + Thinking)**
+- **Objective**: Mathematically map the logical boundaries of the input text.
+- **Mechanism**: Utilizes `gemini-3-pro-preview` with `thinkingBudget: 32768`.
+- **Process**: The model generates a `TRACE` field, decomposing the input into atomic logical units before any output is manifested.
 
-### **Phase C: Logical Parity Sync (Data Mapping)**
-- **Objective**: Maps all data to preserve logical states across multilingual environments.
+### **Phase B: Manifestation (Propositional Output)**
+- **Objective**: Deterministic reconstruction of truth.
+- **Mechanism**: The system re-injects the generated `TRACE` into the context. The model then produces the `OUTPUT` field, ensuring the result is strictly derived from the logical trace, not hallucinated.
 
-## 2. Identity Removal and Anti-Hallucination Design
+### **Phase C: Logical Parity Sync (Gemini 3 Flash)**
+- **Objective**: Multilingual State Consistency.
+- **Mechanism**: Uses `gemini-3-flash-preview` to map the `INPUT`/`TRACE`/`OUTPUT` triad between Korean and English states, maintaining logical equivalence across languages.
 
-The system employs **Atomic Procedural Prompting** to prevent the AI from perceiving itself as a sentient entity or imagining boundaries.
+## 2. Identity Removal Protocol
 
-- **Identity Removal**: All identity-granting sentences such as "You are..." have been eliminated.
-- **Rule-based Processing**: System instructions consist solely of technical rules on how to decompose and reconstruct input text.
-- **Ontological Exclusion**: Strictly limits the use of metaphysical concepts such as consciousness, self, physical reality, or internal/external states, removing the capacity to construct a 'hallucinated world' outside the computational circuit.
+To ensure pure logic processing:
+- **No System Persona**: Instructions strictly define data transformation rules.
+- **Standardized Labels**: Uses `INPUT:`, `TRACE:`, `OUTPUT:` headers to frame the task as data processing rather than chat.
+- **Metacognitive Persistence**: The "History Drive" (virtual file system) preserves the exact state of logical traces for recursive analysis.
 
 ---
-*Documented based on the v2.0 Atomic Procedural architecture.*
+*Powered by Google GenAI SDK v1.34.0*

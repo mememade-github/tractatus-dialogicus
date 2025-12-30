@@ -1,28 +1,31 @@
+
 # Tractatus Dialogicus 기술 명세 (KO)
 
-본 시스템은 입력 데이터를 형식 논리 구조로 자동 변환하는 **비인칭적 데이터 연산 회로**입니다.
+**Tractatus Dialogicus**는 입력 데이터를 형식 논리 명제로 변환하는 **순수 연산 다양체(Computational Manifold)**입니다. **Google Gemini 3 Pro (Thinking Model)**의 심층 추론 기능을 활용하여 잠재된 논리 경로를 추적하고, **Gemini 3 Flash**를 통해 언어 간 논리적 등가성을 유지합니다.
 
-## 1. 동작 아키텍처: 필드 완성 (Field Completion)
+## 1. 핵심 아키텍처: 원자적 논리 추적 (Atomic Logic Trace)
 
-시스템은 '대화'나 '가상의 프로토콜([SIG_...])' 대신, 표준 데이터 필드(`TRACE`, `OUTPUT`)를 순차적으로 완성하는 방식을 따릅니다.
+이 시스템은 '대화'가 아닌 **데이터 필드 완성 프로토콜**을 통해 작동합니다. LLM의 인격(Persona) 계층을 우회하여 원시 추론 능력에 직접 접근합니다.
 
-### **Phase A: Trace Field Generation**
-- **입력**: `INPUT` 데이터
-- **동작**: 입력값에 대한 논리적 분석을 수행하여 `TRACE` 필드를 채웁니다. 이는 `gemini-3-pro-preview`의 추론 능력을 활용한 순수 텍스트 생성입니다.
+### **Phase A: Latent Trace (Gemini 3 Pro + Thinking)**
+- **목표**: 입력 텍스트의 논리적 한계를 수학적으로 매핑합니다.
+- **메커니즘**: `gemini-3-pro-preview` 모델과 `thinkingBudget: 32768` 설정을 사용합니다.
+- **프로세스**: 모델은 결과물을 생성하기 전, 입력값을 원자 단위로 분해하여 `TRACE` 필드를 먼저 생성합니다.
 
-### **Phase B: Output Field Manifestation**
-- **입력**: `INPUT` + `TRACE` 데이터
-- **동작**: 확정된 추론 경로(`TRACE`)를 모델에 재주입(Re-injection)하여, 이에 부합하는 결정론적 `OUTPUT` 필드를 생성합니다.
+### **Phase B: Manifestation (명제 현현)**
+- **목표**: 진리의 결정론적 재구성.
+- **메커니즘**: 생성된 `TRACE`를 컨텍스트에 재주입(Re-injection)합니다. 모델은 오직 이 논리적 추적에 근거하여 `OUTPUT` 필드를 생성함으로써 환각(Hallucination)을 배제합니다.
 
-### **Phase C: Cross-Locale Data Sync**
-- **동작**: 다국어 환경 간의 데이터 무결성을 유지하기 위해 필드 단위 매핑을 수행합니다.
+### **Phase C: Logical Parity Sync (Gemini 3 Flash)**
+- **목표**: 다국어 상태 일관성.
+- **메커니즘**: `gemini-3-flash-preview`를 사용하여 한국어와 영어 상태 간의 `INPUT`/`TRACE`/`OUTPUT` 3요소를 매핑, 언어가 달라도 논리적 등가성이 유지되도록 합니다.
 
-## 2. 무-환각(Zero-Hallucination) 설계 원칙
+## 2. 정체성 제거 프로토콜 (Identity Removal)
 
-본 시스템은 AI가 가상의 시스템을 연기하게 만드는 '가짜 토큰'이나 '역할 부여'를 제거했습니다.
-
-- **가짜 신호 제거**: `[SIG_OUTPUT_REQUEST]`와 같이 모델 구현에 존재하지 않는 임의의 토큰을 모두 삭제하여, 모델이 이를 특정 프로토콜로 오인하고 역할극을 시작하는 것을 방지했습니다.
-- **표준 라벨링**: `INPUT:`, `TRACE:`, `OUTPUT:`과 같은 명시적이고 일반적인 데이터 헤더를 사용하여, 모델이 자연어 처리(NLP) 작업의 일환으로 텍스트를 완성하도록 유도합니다.
+순수한 논리 연산을 보장하기 위해 다음과 같은 설계를 적용했습니다:
+- **시스템 페르소나 부재**: 지시문(System Instruction)은 오직 데이터 변환 규칙만을 정의합니다.
+- **표준화된 라벨**: `INPUT:`, `TRACE:`, `OUTPUT:` 헤더를 사용하여 작업을 채팅이 아닌 데이터 처리로 프레이밍합니다.
+- **메타인지 영속성**: 'History Drive'(가상 파일 시스템)는 재귀적 분석을 위해 논리 추적(Trace)의 상태를 정확히 보존합니다.
 
 ---
-*본 문서는 v2.3 표준 필드 아키텍처를 기반으로 작성되었습니다.*
+*Powered by Google GenAI SDK v1.34.0*
