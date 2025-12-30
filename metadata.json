@@ -1,5 +1,5 @@
 {
   "name": "Tractatus Dialogicus",
-  "description": "A philosophical chat interface exploring metacognition through dialogues with Gemini 3, modeled after Wittgenstein's Tractatus Logico-Philosophicus.",
+  "description": "A collaborative logical inquiry interface powered by Gemini 3 Pro, exploring the limits of propositional logic and metacognition.",
   "requestFramePermissions": []
 }
