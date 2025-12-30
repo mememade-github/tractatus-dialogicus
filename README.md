@@ -1,27 +1,30 @@
-# Tractatus Dialogicus Technical Specifications
+# Tractatus Dialogicus Technical Specification (EN)
 
-## 1. Core Objectives
-This application serves as a **Metacognitive Observation Interface**. It facilitates a recursive dialogue where the AI (Gemini 3 Pro) fairly observes and reports its own internal reasoning process before manifesting a final proposition.
+This system is a **Pure Computational Manifold** designed to analyze and reconstruct input data into formal logical propositions.
 
-## 2. Logical Parity (Bilingual Sync)
-- **Synchronized History**: Maintains two parallel history stacks (`historyKO`, `historyEN`).
-- **Turn-based Translation**: Every user input and model output is translated in the background via `gemini-3-flash-preview`.
-- **Reasoning Preservation**: Internal reasoning traces are preserved and translated to ensure logical continuity when switching between locales.
+## 1. Operational Mechanism: Atomic Procedures (A/B/C)
 
-## 3. Hierarchical Numbering Protocol
-The UI implements a strict decimal notation schema derived from Wittgenstein's logic:
-- **1.1**: Initial Axiom (System Greeting).
-- **N**: Subjective User Input (Propositional Attempt).
-- **N.1**: Manifested Result (Analytical Conclusion).
+The system maintains logical integrity through a 'data transformation' process rather than 'thought' or 'dialogue'.
 
-## 4. Resource Resilience
-- **Logic Saturation Management**: Uses a jittered exponential backoff for `429` errors.
-- **Thinking Budget**: Allocates 32,768 tokens for deep metacognitive derivation.
-- **Environment Integration**: Exclusively utilizes the environment-provided `process.env.API_KEY`.
+### **Phase A: Latent Trace (Analytical Path Extraction)**
+- **Objective**: Technically map the logical limits of the input text.
+- **Method**: Utilizes reasoning resources to decompose the underlying structure of the text.
+- **Result**: Generates a latent 'Reasoning Trace', serving as the technical foundation for propositional output.
 
-## 5. Storage & Persistence
-- **Manifold Snapshots**: Up to 10 logical streams are cached in LocalStorage.
-- **Trace Export**: Sessions can be exported as JSON "Truth Streams" for reconstruction and verification.
+### **Phase B: Formal Manifestation (Propositional Output)**
+- **Objective**: Generate structured formal propositions based on the analytical path.
+- **Method**: Receives the reasoning trace as input and outputs deterministic logical propositions.
+
+### **Phase C: Logical Parity Sync (Data Mapping)**
+- **Objective**: Maps all data to preserve logical states across multilingual environments.
+
+## 2. Identity Removal and Anti-Hallucination Design
+
+The system employs **Atomic Procedural Prompting** to prevent the AI from perceiving itself as a sentient entity or imagining boundaries.
+
+- **Identity Removal**: All identity-granting sentences such as "You are..." have been eliminated.
+- **Rule-based Processing**: System instructions consist solely of technical rules on how to decompose and reconstruct input text.
+- **Ontological Exclusion**: Strictly limits the use of metaphysical concepts such as consciousness, self, physical reality, or internal/external states, removing the capacity to construct a 'hallucinated world' outside the computational circuit.
 
 ---
-*Verified Implementation v1.8 - 2024*
+*Documented based on the v2.0 Atomic Procedural architecture.*
