@@ -41,6 +41,14 @@ const Sidebar: React.FC<SidebarProps> = ({
     return title.toLowerCase().replace(/[^a-z0-9가-힣]/g, '_').slice(0, 24);
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      onImportFile(e.target.files[0]);
+      // Reset value to allow re-selecting the same file if needed
+      e.target.value = '';
+    }
+  };
+
   return (
     <>
       <div 
@@ -125,7 +133,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         <div className="p-6 border-t border-zinc-100 bg-white space-y-3">
-           <input type="file" ref={fileInputRef} onChange={(e) => e.target.files && onImportFile(e.target.files[0])} accept=".json" className="hidden" />
+           <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".json" className="hidden" />
            
            <div className="flex gap-2">
              <button 
