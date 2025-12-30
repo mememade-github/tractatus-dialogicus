@@ -1,5 +1,6 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import { Message, Language } from '../types';
+import { Message, Language, ModelType } from '../types';
 import { getSystemInstruction } from '../constants';
 
 async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5, initialDelay = 2000): Promise<T> {
@@ -47,7 +48,7 @@ export const getReasoningTrace = async (history: Message[], input: string, lang:
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: ModelType.GEMINI_3_PRO,
       contents: [
         ...constructPromptHistory(history), 
         { role: 'user', parts: [{ text: `INPUT:\n${input}\n\nGenerate TRACE field only.` }] }
@@ -72,7 +73,7 @@ export const getManifestation = async (history: Message[], input: string, reason
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-pro-preview',
+      model: ModelType.GEMINI_3_PRO,
       contents: [
         ...constructPromptHistory(history), 
         { role: 'user', parts: [{ text: `INPUT:\n${input}` }] },
@@ -103,7 +104,7 @@ export const translateTurn = async (
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: 'gemini-3-flash-preview', 
+      model: ModelType.GEMINI_3_FLASH, 
       contents: `TARGET_LANG: ${targetLang.toUpperCase()}
       
       SOURCE_DATA:
