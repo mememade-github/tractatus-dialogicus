@@ -1,20 +1,22 @@
+
 export type Language = 'ko' | 'en';
 
 export interface Message {
   id: string;
   role: 'user' | 'model';
-  content: string; // The visible content (최종 사용자에게 표시되는 명제/결과값)
-  reasoning?: string; // The extracted metacognition/reasoning (LLM의 내부 사고 과정)
-  raw?: string; // The raw unparsed XML response (검증을 위한 원본 데이터)
+  content: string; 
+  reasoning?: string; 
+  raw?: string; 
   timestamp: number;
 }
 
 export interface ChatState {
-  historyKO: Message[]; // Dedicated Korean History
-  historyEN: Message[]; // Dedicated English History
+  historyKO: Message[]; 
+  historyEN: Message[]; 
   isLoading: boolean;
+  loadingPhase: string | null;
   error: string | null;
-  language: Language; // View pointer
+  language: Language; 
 }
 
 export interface SavedSession {
