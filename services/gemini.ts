@@ -31,14 +31,20 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5, initialDelay =
  * LLM의 역할극(Roleplay)을 방지하기 위해 'role' 대신 명시적인 데이터 라벨(TRACE, OUTPUT, INPUT)을 사용합니다.
  */
 export const constructPromptHistory = (history: Message[]) => {
-  return history.map(msg => ({
-    role: msg.role,
-    parts: [{ 
-      text: msg.role === 'model' 
-        ? `TRACE:\n${msg.reasoning}\nOUTPUT:\n${msg.content}` 
-        : `INPUT:\n${msg.content}` 
-    }]
-  }));
+  return history.map(msg => {
+    // [FIX] reasoning이 undefined인 경우 안전하게 처리
+    if (msg.role === 'model') {
+      const reasoning = msg.reasoning || '[NO_TRACE]';
+      return {
+        role: msg.role,
+        parts: [{ text: `TRACE:\n${reasoning}\nOUTPUT:\n${msg.content}` }]
+      };
+    }
+    return {
+      role: msg.role,
+      parts: [{ text: `INPUT:\n${msg.content}` }]
+    };
+  });
 };
 
 /**
@@ -111,14 +117,14 @@ export const translateTurn = async (
   return withRetry(async () => {
     const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
-      model: ModelType.GEMINI_3_FLASH, 
+      model: ModelType.GEMINI_3_FLASH,
       contents: `TARGET_LANG: ${targetLang.toUpperCase()}
-      
+
       SOURCE_DATA:
       - U: ${userContent}
       - C: ${modelContent}
       - R: ${modelReasoning}`,
-      config: { 
+      config: {
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -131,7 +137,17 @@ export const translateTurn = async (
         }
       }
     });
-    const data = JSON.parse(response.text || "{}");
+
+    // [FIX] JSON 파싱 예외 처리
+    let data: { u?: string; c?: string; r?: string } = {};
+    try {
+      data = JSON.parse(response.text || "{}");
+    } catch (parseError) {
+      console.warn("[TRANSLATION_PARSE_ERROR] Failed to parse response, using original content:", parseError);
+      // 파싱 실패 시 원본 반환
+      return { userContent, modelContent, modelReasoning };
+    }
+
     return {
       userContent: data.u || userContent,
       modelContent: data.c || modelContent,

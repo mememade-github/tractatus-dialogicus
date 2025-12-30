@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { getReasoningTrace, getManifestation, translateTurn } from './services/gemini';
 import { Message, ChatState, SavedSession } from './types';
-import { INITIAL_GREETING_KO, INITIAL_GREETING_EN, APP_NAME, LOADING_PHASES } from './constants';
+import { INITIAL_GREETING_KO, INITIAL_GREETING_EN, createInitialGreetingKO, createInitialGreetingEN, APP_NAME, LOADING_PHASES } from './constants';
 import ChatMessage from './components/ChatMessage';
 import ContextInspector from './components/ContextInspector';
 import TokenInspectorModal from './components/TokenInspectorModal';
@@ -136,13 +136,14 @@ const App: React.FC = () => {
 
   const handleNewChat = useCallback(() => {
     const newId = Date.now().toString();
-    const newState: ChatState = { 
-      historyKO: [INITIAL_GREETING_KO], 
-      historyEN: [INITIAL_GREETING_EN], 
-      isLoading: false, 
+    // [FIX] 팩토리 함수 사용하여 매 호출마다 새 타임스탬프/ID 생성
+    const newState: ChatState = {
+      historyKO: [createInitialGreetingKO()],
+      historyEN: [createInitialGreetingEN()],
+      isLoading: false,
       loadingPhase: null,
-      error: null, 
-      language: chatState?.language || 'ko' 
+      error: null,
+      language: chatState?.language || 'ko'
     };
     // 새 파일 생성 개념
     const newSession: SavedSession = { id: newId, title: "new_logic_stream", updatedAt: Date.now(), data: newState };

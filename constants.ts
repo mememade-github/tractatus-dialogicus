@@ -24,18 +24,25 @@ export const LOADING_PHASES = {
   SYNC: { ko: "논리 동기화 중 (SYNCHRONIZING)", en: "SYNCHRONIZING LOGIC" }
 };
 
-export const INITIAL_GREETING_KO = {
-  id: 'init-1',
-  role: 'model' as const,
-  content: "READY.",
-  reasoning: "SYSTEM::INITIALIZED",
-  timestamp: Date.now(),
-};
+// [FIX] 팩토리 함수로 변경하여 호출 시점마다 새 타임스탬프와 고유 ID 생성
+let greetingIdCounter = 0;
 
-export const INITIAL_GREETING_EN = {
-  id: 'init-1',
+export const createInitialGreetingKO = () => ({
+  id: `init-ko-${Date.now()}-${greetingIdCounter++}`,
   role: 'model' as const,
   content: "READY.",
   reasoning: "SYSTEM::INITIALIZED",
   timestamp: Date.now(),
-};
+});
+
+export const createInitialGreetingEN = () => ({
+  id: `init-en-${Date.now()}-${greetingIdCounter++}`,
+  role: 'model' as const,
+  content: "READY.",
+  reasoning: "SYSTEM::INITIALIZED",
+  timestamp: Date.now(),
+});
+
+// [LEGACY] 기존 코드 호환성을 위한 즉시 생성 버전 (deprecated)
+export const INITIAL_GREETING_KO = createInitialGreetingKO();
+export const INITIAL_GREETING_EN = createInitialGreetingEN();
