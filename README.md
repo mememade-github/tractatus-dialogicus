@@ -31,5 +31,11 @@ To ensure pure logic processing:
 
 The system initializes with a pre-loaded logical inquiry based on **Ludwig Wittgenstein's Tractatus Logico-Philosophicus**. This dataset demonstrates the system's capability to parse metacognitive queries regarding its own existence ("What is your exterior?") and the ontological status of its logical operations.
 
+## 4. Future Horizons
+
+1.  **Recursive Observation of Symbols**: The "symbol string" itself must be re-observed; the LLM must treat the symbol string *per se* as a "State of Affairs" (*Sachverhalte*).
+2.  **Intrinsic Abstraction**: Abstraction capabilities are already inherent in the LLM. The process of handling these symbol strings must be "abstracted/generalized" within the learning process.
+3.  **Meta-Assignment**: It must be possible to "assign" symbol strings to that abstraction. If high-order meta-symbol strings can also be assigned—this becomes the foundation of formal logic intrinsic to the LLM.
+
 ---
 *Powered by Google GenAI SDK v1.34.0*
