@@ -9,6 +9,23 @@ import TokenInspectorModal from './components/TokenInspectorModal';
 import Sidebar from './components/Sidebar';
 import { exampleData } from './history/exampleData';
 
+// [FIX] localStorage 안전한 저장 헬퍼 (QuotaExceededError 처리)
+const STORAGE_KEY = 'tractatus_sessions';
+const safeLocalStorageSet = (key: string, value: string): boolean => {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (error: any) {
+    if (error.name === 'QuotaExceededError' || error.code === 22) {
+      console.error("[STORAGE_ERROR] localStorage quota exceeded. Consider exporting old sessions.");
+      alert("Storage limit reached. Please export and delete old sessions to free up space.");
+    } else {
+      console.error("[STORAGE_ERROR] Failed to save:", error);
+    }
+    return false;
+  }
+};
+
 const App: React.FC = () => {
   const [sessions, setSessions] = useState<SavedSession[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
@@ -33,7 +50,7 @@ const App: React.FC = () => {
 
   // [FILE SYSTEM SYNC] 세션 로드 및 초기화
   useEffect(() => {
-    const stored = localStorage.getItem('tractatus_sessions');
+    const stored = localStorage.getItem(STORAGE_KEY);
     
     if (stored) {
       try {
@@ -64,7 +81,7 @@ const App: React.FC = () => {
       setChatState(initSession.data);
       
       // 로컬 스토리지(가상 파일 시스템)에 즉시 동기화
-      localStorage.setItem('tractatus_sessions', JSON.stringify(initialList));
+      safeLocalStorageSet(STORAGE_KEY, JSON.stringify(initialList));
     } catch (e) {
       console.error("Failed to load example file", e);
       handleNewChat(); // 최악의 경우 빈 채팅 시작
@@ -83,18 +100,29 @@ const App: React.FC = () => {
         const updated = [...prev];
         let title = updated[idx].title;
         
-        // 제목이 기본값이면 첫 번째 사용자 메시지로 자동 설정
+        // [FIX] 제목이 기본값이면 현재 언어의 첫 번째 사용자 메시지로 자동 설정
         if (title === "new_logic_stream") {
-          const firstUser = chatState.historyKO.find(m => m.role === 'user');
+          const activeHistory = chatState.language === 'ko' ? chatState.historyKO : chatState.historyEN;
+          const firstUser = activeHistory.find(m => m.role === 'user');
           if (firstUser) title = firstUser.content.slice(0, 30).trim() + "...";
         }
         
         updated[idx] = { ...updated[idx], title, data: chatState, updatedAt: Date.now() };
         
         // 최신 수정순 정렬 및 최대 10개 유지 (History Rotation)
-        const sorted = updated.sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 10);
-        
-        localStorage.setItem('tractatus_sessions', JSON.stringify(sorted));
+        // [FIX] 현재 활성 세션은 삭제 대상에서 보호
+        let sorted = updated.sort((a, b) => b.updatedAt - a.updatedAt);
+        if (sorted.length > 10) {
+          const currentIdx = sorted.findIndex(s => s.id === currentSessionId);
+          if (currentIdx >= 10) {
+            // 현재 세션이 삭제 대상이면 맨 앞으로 이동
+            const [currentSession] = sorted.splice(currentIdx, 1);
+            sorted = [currentSession, ...sorted];
+          }
+          sorted = sorted.slice(0, 10);
+        }
+
+        safeLocalStorageSet(STORAGE_KEY, JSON.stringify(sorted));
         return sorted;
       });
     }, 500);
@@ -121,7 +149,7 @@ const App: React.FC = () => {
     
     setSessions(prev => {
       const updated = [newSession, ...prev].slice(0, 10);
-      localStorage.setItem('tractatus_sessions', JSON.stringify(updated));
+      safeLocalStorageSet(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
     setCurrentSessionId(newId);
@@ -138,7 +166,7 @@ const App: React.FC = () => {
     const nextSessions = sessions.filter(s => s.id !== id);
     setSessions(nextSessions);
     // 파일 삭제 동기화
-    localStorage.setItem('tractatus_sessions', JSON.stringify(nextSessions));
+    safeLocalStorageSet(STORAGE_KEY, JSON.stringify(nextSessions));
     
     if (currentSessionId === id) {
       if (nextSessions.length > 0) handleLoadSession(nextSessions[0]);
@@ -152,10 +180,37 @@ const App: React.FC = () => {
       try {
         const content = e.target?.result as string;
         const parsed = JSON.parse(content);
-        
-        // 데이터 구조 유효성 검사
-        if (!parsed.data || !Array.isArray(parsed.data.historyKO)) {
-            throw new Error("Invalid format");
+
+        // [FIX] 완전한 데이터 구조 유효성 검사
+        if (!parsed.data) {
+          throw new Error("Missing 'data' field");
+        }
+        if (!Array.isArray(parsed.data.historyKO)) {
+          throw new Error("Missing or invalid 'historyKO' array");
+        }
+        if (!Array.isArray(parsed.data.historyEN)) {
+          throw new Error("Missing or invalid 'historyEN' array");
+        }
+
+        // [FIX] 메시지 필수 필드 검증
+        const validateMessages = (messages: any[], lang: string) => {
+          messages.forEach((msg, idx) => {
+            if (!msg.id || !msg.role || !msg.content || msg.timestamp === undefined) {
+              throw new Error(`Invalid message at ${lang}[${idx}]: missing required fields (id, role, content, timestamp)`);
+            }
+            if (msg.role !== 'user' && msg.role !== 'model') {
+              throw new Error(`Invalid role '${msg.role}' at ${lang}[${idx}]`);
+            }
+          });
+        };
+        validateMessages(parsed.data.historyKO, 'historyKO');
+        validateMessages(parsed.data.historyEN, 'historyEN');
+
+        // [FIX] 메시지 ID 고유성 검증
+        const allIds = [...parsed.data.historyKO, ...parsed.data.historyEN].map((m: Message) => m.id);
+        const uniqueIds = new Set(allIds);
+        if (uniqueIds.size !== allIds.length) {
+          console.warn("[IMPORT_WARNING] Duplicate message IDs detected, may cause sync issues");
         }
 
         // ID가 없으면(외부 파일) 새로 생성, 있으면 기존 ID 사용
@@ -173,7 +228,7 @@ const App: React.FC = () => {
            const filtered = prev.filter(s => s.id !== importedId);
            const updated = [importedSession, ...filtered].slice(0, 10);
            // [SYNC] 가져오기 즉시 스토리지 동기화
-           localStorage.setItem('tractatus_sessions', JSON.stringify(updated));
+           safeLocalStorageSet(STORAGE_KEY, JSON.stringify(updated));
            return updated;
         });
 
@@ -242,7 +297,10 @@ const App: React.FC = () => {
     const currentLang = chatState.language;
     const shadowLang = currentLang === 'ko' ? 'en' : 'ko';
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: messageContent, timestamp: Date.now() };
-    
+
+    // [FIX] Race Condition: 상태 업데이트 전에 현재 이력을 캡처
+    const activeHistory = currentLang === 'ko' ? chatState.historyKO : chatState.historyEN;
+
     setChatState(prev => ({
       ...prev, isLoading: true, error: null, loadingPhase: LOADING_PHASES.TRACE[currentLang],
       historyKO: currentLang === 'ko' ? [...prev.historyKO, userMsg] : prev.historyKO,
@@ -251,8 +309,6 @@ const App: React.FC = () => {
     setInput('');
 
     try {
-      const activeHistory = currentLang === 'ko' ? chatState.historyKO : chatState.historyEN;
-      
       const reasoning = await getReasoningTrace(activeHistory, userMsg.content, currentLang);
       setChatState(prev => ({ ...prev, loadingPhase: LOADING_PHASES.MANIFEST[currentLang] }));
       
@@ -260,16 +316,27 @@ const App: React.FC = () => {
       const modelMsg: Message = { id: (Date.now() + 1).toString(), role: 'model', content, reasoning, timestamp: Date.now() };
 
       setChatState(prev => ({
-        ...prev, 
+        ...prev,
         loadingPhase: LOADING_PHASES.SYNC[currentLang],
         historyKO: currentLang === 'ko' ? [...prev.historyKO, modelMsg] : prev.historyKO,
         historyEN: currentLang === 'en' ? [...prev.historyEN, modelMsg] : prev.historyEN,
       }));
 
-      const trans = await translateTurn(userMsg.content, modelMsg.content, modelMsg.reasoning!, shadowLang);
-      const uShadow: Message = { ...userMsg, content: trans.userContent };
-      const mShadow: Message = { ...modelMsg, content: trans.modelContent, reasoning: trans.modelReasoning };
-      
+      // [FIX] 번역 실패 시에도 언어 간 동기화 유지
+      let uShadow: Message = { ...userMsg };
+      let mShadow: Message = { ...modelMsg };
+
+      try {
+        // [FIX] Non-null assertion 제거, undefined 시 빈 문자열 사용
+        const reasoningForTranslation = modelMsg.reasoning || '';
+        const trans = await translateTurn(userMsg.content, modelMsg.content, reasoningForTranslation, shadowLang);
+        uShadow = { ...userMsg, content: trans.userContent };
+        mShadow = { ...modelMsg, content: trans.modelContent, reasoning: trans.modelReasoning };
+      } catch (translateError: any) {
+        console.warn("[TRANSLATION_FALLBACK] Using original content for shadow language:", translateError.message);
+        // 번역 실패 시 원본 그대로 사용 (동기화 유지)
+      }
+
       setChatState(prev => ({
         ...prev,
         isLoading: false,
@@ -277,9 +344,20 @@ const App: React.FC = () => {
         historyKO: currentLang === 'en' ? [...prev.historyKO, uShadow, mShadow] : prev.historyKO,
         historyEN: currentLang === 'ko' ? [...prev.historyEN, uShadow, mShadow] : prev.historyEN,
       }));
-      
+
     } catch (error: any) {
-      setChatState(prev => ({ ...prev, isLoading: false, loadingPhase: null, error: error.message || "Logical disconnection." }));
+      // [FIX] 메인 로직 실패 시에도 shadow 언어에 사용자 메시지는 동기화
+      setChatState(prev => ({
+        ...prev,
+        isLoading: false,
+        loadingPhase: null,
+        error: error.message || "Logical disconnection.",
+        // 사용자 메시지는 양쪽에 동기화 유지
+        historyKO: currentLang === 'en' && !prev.historyKO.find(m => m.id === userMsg.id)
+          ? [...prev.historyKO, userMsg] : prev.historyKO,
+        historyEN: currentLang === 'ko' && !prev.historyEN.find(m => m.id === userMsg.id)
+          ? [...prev.historyEN, userMsg] : prev.historyEN,
+      }));
     }
   };
 
