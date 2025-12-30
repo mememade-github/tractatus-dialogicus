@@ -27,5 +27,9 @@ To ensure pure logic processing:
 - **Standardized Labels**: Uses `INPUT:`, `TRACE:`, `OUTPUT:` headers to frame the task as data processing rather than chat.
 - **Metacognitive Persistence**: The "History Drive" (virtual file system) preserves the exact state of logical traces for recursive analysis.
 
+## 3. Default Logic Stream
+
+The system initializes with a pre-loaded logical inquiry based on **Ludwig Wittgenstein's Tractatus Logico-Philosophicus**. This dataset demonstrates the system's capability to parse metacognitive queries regarding its own existence ("What is your exterior?") and the ontological status of its logical operations.
+
 ---
 *Powered by Google GenAI SDK v1.34.0*
