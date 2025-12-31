@@ -104,7 +104,10 @@ const App: React.FC = () => {
         if (title === "new_logic_stream") {
           const activeHistory = chatState.language === 'ko' ? chatState.historyKO : chatState.historyEN;
           const firstUser = activeHistory.find(m => m.role === 'user');
-          if (firstUser) title = firstUser.content.slice(0, 30).trim() + "...";
+          // [FIX] content가 존재하고 길이가 있는지 확인
+          if (firstUser?.content && firstUser.content.length > 0) {
+            title = firstUser.content.slice(0, 30).trim() + "...";
+          }
         }
         
         updated[idx] = { ...updated[idx], title, data: chatState, updatedAt: Date.now() };
@@ -283,13 +286,20 @@ const App: React.FC = () => {
         filenameBase = sessionToExport.title.replace(/[^a-z0-9가-힣\-_]/gi, '_').slice(0, 50);
     }
 
+    // [FIX] 다운로드 앵커 정리를 try-finally로 보장
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sessionToExport, null, 2));
     const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `tractatus_${filenameBase}.json`);
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
+    try {
+      downloadAnchorNode.setAttribute("href", dataStr);
+      downloadAnchorNode.setAttribute("download", `tractatus_${filenameBase}.json`);
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+    } finally {
+      // 항상 DOM에서 제거
+      if (downloadAnchorNode.parentNode) {
+        downloadAnchorNode.remove();
+      }
+    }
   }, [currentSessionId, sessions, chatState]);
 
   const handleSend = async () => {

@@ -35,20 +35,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, index, onInspect }) 
     );
   };
 
-  // 한 줄을 파싱하여 React 노드로 변환
+  // [FIX] 한 줄을 파싱하여 React 노드로 변환 (미사용 변수 제거)
   const renderLine = (line: string): React.ReactNode => {
-    const parts: React.ReactNode[] = [];
-    let remaining = line;
     let keyIdx = 0;
 
-    // 패턴 매칭: **bold**, *italic*, `code`
-    const patterns = [
-      { regex: /\*\*(.+?)\*\*/g, render: (m: string) => <strong key={keyIdx++} className="text-zinc-900 font-bold">{m}</strong> },
-      { regex: /\*(.+?)\*/g, render: (m: string) => <em key={keyIdx++} className="italic">{m}</em> },
-      { regex: /`(.+?)`/g, render: (m: string) => <code key={keyIdx++} className="bg-zinc-50 px-1 rounded font-mono text-xs text-primary">{m}</code> },
-    ];
-
-    // 간단한 토큰화: 정규식 매칭 순서대로 처리
+    // 간단한 토큰화: 통합 정규식으로 **bold**, *italic*, `code` 처리
     const tokenize = (text: string): React.ReactNode[] => {
       const tokens: React.ReactNode[] = [];
       let lastIndex = 0;
@@ -83,7 +74,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, index, onInspect }) 
       return tokens.length > 0 ? tokens : [text];
     };
 
-    return <>{tokenize(remaining)}</>;
+    return <>{tokenize(line)}</>;
   };
 
   return (

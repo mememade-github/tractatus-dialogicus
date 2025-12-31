@@ -7,6 +7,18 @@ interface TokenInspectorModalProps {
 }
 
 const TokenInspectorModal: React.FC<TokenInspectorModalProps> = ({ message, onClose }) => {
+  // [FIX] 키보드 접근성 - ESC 키로 모달 닫기
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  // 사용자 메시지는 검사 대상 아님
   if (message.role !== 'model') return null;
 
   // JSON 응답 구조를 기반으로 데이터 추출

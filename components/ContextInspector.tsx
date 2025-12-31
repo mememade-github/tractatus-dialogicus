@@ -2,12 +2,29 @@ import React from 'react';
 import { Message } from '../types';
 import { constructPromptHistory } from '../services/gemini';
 
+// [FIX] constructPromptHistory 반환 타입 정의
+interface PromptHistoryItem {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
 interface ContextInspectorProps {
-  messages: Message[];
+  messages: readonly Message[];
   onClose: () => void;
 }
 
 const ContextInspector: React.FC<ContextInspectorProps> = ({ messages, onClose }) => {
+  // [FIX] 키보드 접근성 - ESC 키로 모달 닫기
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const rawContext = constructPromptHistory(messages);
 
   return (
@@ -29,13 +46,14 @@ const ContextInspector: React.FC<ContextInspectorProps> = ({ messages, onClose }
             This log represents the raw token stream injected into the engine. Note how internal <strong>metacognition</strong> from the model's turn is persisted and re-introduced as factual context for subsequent recursive loops.
           </div>
 
-          {rawContext.map((item: any, idx: number) => (
+          {rawContext.map((item: PromptHistoryItem, idx: number) => (
             <div key={idx} className="flex flex-col gap-3">
               <div className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest border-b border-zinc-100 pb-2 w-full">
                 {item.role === 'model' ? 'Logical_State' : 'External_Input'}
               </div>
               <div className="bg-zinc-50 p-6 rounded-2xl border border-zinc-100 whitespace-pre-wrap leading-relaxed shadow-sm">
-                {item.parts[0].text}
+                {/* [FIX] parts 배열 안전한 접근 */}
+                {item.parts?.[0]?.text || '[EMPTY_SEGMENT]'}
               </div>
             </div>
           ))}
