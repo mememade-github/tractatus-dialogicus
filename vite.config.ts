@@ -4,11 +4,7 @@ import react from '@vitejs/plugin-react';
 
 /**
  * [SECURITY WARNING]
- * API 키가 클라이언트 번들에 포함됩니다.
- * 프로덕션 환경에서는 다음을 권장합니다:
- * 1. API 키에 도메인/IP 제한 설정
- * 2. 사용량 제한(Quota) 설정
- * 3. 가능하면 백엔드 프록시 서버 사용
+ * API 키가 클라이언트 번들에 포함: https://console.cloud.google.com/apis/credentials, 웹사이트 제한사항 설정 수행
  */
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
