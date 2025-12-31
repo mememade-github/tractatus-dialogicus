@@ -10,13 +10,14 @@ export interface Message {
   timestamp: number;
 }
 
+// [FIX] readonly 배열로 불변성 힌트 제공 (상태 변경 시 새 배열 생성 강제)
 export interface ChatState {
-  historyKO: Message[]; 
-  historyEN: Message[]; 
-  isLoading: boolean;
-  loadingPhase: string | null;
-  error: string | null;
-  language: Language; 
+  readonly historyKO: readonly Message[];
+  readonly historyEN: readonly Message[];
+  readonly isLoading: boolean;
+  readonly loadingPhase: string | null;
+  readonly error: string | null;
+  readonly language: Language;
 }
 
 export interface SavedSession {

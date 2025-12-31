@@ -3,10 +3,21 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { Message, Language, ModelType } from '../types';
 import { getSystemInstruction } from '../constants';
 
+// [FIX] 매직 넘버를 명명된 상수로 정의
+const THINKING_BUDGET_MAX = 32768;  // Gemini 3 Native Thinking 최대 예산
+const RETRY_CONFIG = {
+  MAX_RETRIES: 5,
+  INITIAL_DELAY_MS: 2000,
+} as const;
+
 /**
  * API 호출 실패 시 지수 백오프(Exponential Backoff)를 적용하여 재시도합니다.
  */
-async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5, initialDelay = 2000): Promise<T> {
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = RETRY_CONFIG.MAX_RETRIES,
+  initialDelay = RETRY_CONFIG.INITIAL_DELAY_MS
+): Promise<T> {
   let lastError: any;
   for (let i = 0; i < maxRetries; i++) {
     try {
@@ -30,7 +41,8 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 5, initialDelay =
  * 대화 기록을 단순 텍스트 데이터 블록으로 변환합니다.
  * LLM의 역할극(Roleplay)을 방지하기 위해 'role' 대신 명시적인 데이터 라벨(TRACE, OUTPUT, INPUT)을 사용합니다.
  */
-export const constructPromptHistory = (history: Message[]) => {
+// [FIX] readonly 배열 타입 호환
+export const constructPromptHistory = (history: readonly Message[]) => {
   return history.map(msg => {
     // [FIX] reasoning이 undefined인 경우 안전하게 처리
     if (msg.role === 'model') {
@@ -52,7 +64,7 @@ export const constructPromptHistory = (history: Message[]) => {
  * 목적: INPUT에 대한 심층 논리 분석 데이터를 생성합니다. (OUTPUT 필드 제외)
  * 모델: Gemini 3 Pro (Thinking Model)
  */
-export const getReasoningTrace = async (history: Message[], input: string, lang: Language): Promise<string> => {
+export const getReasoningTrace = async (history: readonly Message[], input: string, lang: Language): Promise<string> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API_KEY_UNSET");
 
@@ -66,7 +78,7 @@ export const getReasoningTrace = async (history: Message[], input: string, lang:
       ],
       config: {
         systemInstruction: getSystemInstruction(lang),
-        thinkingConfig: { thinkingBudget: 32768 } // Gemini 3 Native Thinking (Max Budget)
+        thinkingConfig: { thinkingBudget: THINKING_BUDGET_MAX }
       },
     });
     return response.text || "";
@@ -78,7 +90,7 @@ export const getReasoningTrace = async (history: Message[], input: string, lang:
  * 목적: INPUT과 생성된 TRACE를 기반으로 최종 OUTPUT 필드를 완성합니다.
  * 모델: Gemini 3 Pro
  */
-export const getManifestation = async (history: Message[], input: string, reasoning: string, lang: Language): Promise<string> => {
+export const getManifestation = async (history: readonly Message[], input: string, reasoning: string, lang: Language): Promise<string> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API_KEY_UNSET");
 

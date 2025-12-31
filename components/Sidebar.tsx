@@ -36,24 +36,30 @@ const Sidebar: React.FC<SidebarProps> = ({
     setEditingId(null);
   };
 
-  const formatFileName = (session: SavedSession) => {
+  // [FIX] 날짜 포맷팅 - 로케일 독립적 형식 사용
+  const formatFileName = (session: SavedSession): string => {
     // 기본 제목인 경우 생성 시각(ID)을 파싱하여 표시
     if (session.title === "new_logic_stream") {
        try {
          const ts = !isNaN(Number(session.id)) ? Number(session.id) : session.updatedAt;
          const date = new Date(ts);
-         // 포맷: YY.MM.DD HH:mm
+         // [FIX] 유효하지 않은 날짜 처리
+         if (isNaN(date.getTime())) {
+           return "Untitled File";
+         }
+         // 포맷: YY.MM.DD HH:mm (로케일 독립적)
          const y = String(date.getFullYear()).slice(2);
          const m = String(date.getMonth() + 1).padStart(2, '0');
          const d = String(date.getDate()).padStart(2, '0');
-         const time = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-         return `File ${y}.${m}.${d} ${time}`;
+         const h = String(date.getHours()).padStart(2, '0');
+         const min = String(date.getMinutes()).padStart(2, '0');
+         return `File ${y}.${m}.${d} ${h}:${min}`;
        } catch (e) {
          return "Untitled File";
        }
     }
-    // 사용자 지정 제목인 경우
-    return session.title.slice(0, 24);
+    // [FIX] 사용자 지정 제목 - null/undefined 안전 처리
+    return (session.title || "Untitled").slice(0, 24);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,14 +85,19 @@ const Sidebar: React.FC<SidebarProps> = ({
         <div className="p-6 bg-white">
            <div className="flex justify-between items-center mb-6">
               <span className="text-[11px] font-bold text-primary uppercase tracking-[0.2em] font-mono">History Drive</span>
-              <button onClick={onToggle} className="md:hidden p-2 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400">
+              <button
+                onClick={onToggle}
+                className="md:hidden p-2 rounded-full hover:bg-zinc-100 transition-colors text-zinc-400"
+                aria-label="Close sidebar"
+              >
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path d="M6 18L18 6M6 6l12 12" strokeWidth="2"/></svg>
               </button>
            </div>
 
-           <button 
+           <button
              onClick={onNewChat}
              className="w-full flex items-center justify-center gap-3 bg-primary text-white px-6 py-4 rounded-full text-sm font-bold transition-all shadow-md hover:shadow-lg active:scale-95"
+             aria-label="Create new chat session"
            >
              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M12 5v14M5 12h14"/></svg>
              <span>New File</span>
